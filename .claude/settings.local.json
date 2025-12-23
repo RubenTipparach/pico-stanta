@@ -19,7 +19,13 @@
       "Bash(cmd //c build-web.bat:*)",
       "Bash(cmd /c \"cd /d c:\\\\Users\\\\santi\\\\repos\\\\pico-santa && build-web.bat\")",
       "Bash(start:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(cmd /c:*)",
+      "Bash(cd:*)",
+      "Bash(cmake --build:*)",
+      "Bash(PATH=\"C:/ProgramData/mingw64/mingw64/bin:$PATH\" ninja:*)",
+      "Bash(bash:*)",
+      "Bash(PATH=\"C:/ProgramData/mingw64/mingw64/bin:$PATH\" c:/Users/santi/repos/pico-santa/build.pico/pioasm-install/pioasm/pioasm.exe:*)"
     ]
   }
 }
