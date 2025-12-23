@@ -1,3 +1,12 @@
+# Pico Santa!
+
+I'm prepping for christmas with my own little picosystem game.
+
+https://rubentipparach.github.io/pico-stanta/
+
+Thanks to Santa Claude, I finally got around to getting the boiler plate setup and working. :D
+
+
 # PicoSystem 32blit Boilerplate <!-- omit in toc -->
 
 ![Build](https://github.com/32blit/32blit-boilerplate/workflows/Build/badge.svg)
