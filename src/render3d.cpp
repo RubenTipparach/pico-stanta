@@ -9,7 +9,10 @@
 #define CAMERA_FOVY 180.0f
 #define PI 3.14159265f
 
-uint8_t depth_buffer[DEPTH_WIDTH * DEPTH_HEIGHT];
+uint8_t depth_buffer_a[DEPTH_WIDTH * DEPTH_HEIGHT];
+uint8_t depth_buffer_b[DEPTH_WIDTH * DEPTH_HEIGHT];
+uint8_t* depth_buffer_render = depth_buffer_a;   // Core 1 writes here
+uint8_t* depth_buffer_display = depth_buffer_b;  // Core 0 reads here
 
 static float camera_position[3] = {0.0f, 0.0f, 0.0f};
 static float camera_pitch = 0.0f;
@@ -46,7 +49,16 @@ void render3d_init() {
 
 void render3d_begin_frame() { rasterizer_begin_frame(); }
 uint32_t render3d_end_frame() { return 0; }
-void render3d_clear() { memset(depth_buffer, 0xFF, sizeof(depth_buffer)); }
+void render3d_clear() {
+    memset(depth_buffer_a, 0xFF, sizeof(depth_buffer_a));
+    memset(depth_buffer_b, 0xFF, sizeof(depth_buffer_b));
+}
+
+void render3d_swap_depth_buffers() {
+    uint8_t* temp = depth_buffer_render;
+    depth_buffer_render = depth_buffer_display;
+    depth_buffer_display = temp;
+}
 
 static float dot_product3(float v1[3], float v2[3]) { return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2]; }
 

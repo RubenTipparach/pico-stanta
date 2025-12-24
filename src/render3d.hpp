@@ -20,8 +20,12 @@ struct VertexScreen {
     uint8_t _pad;
 };
 
-// Global depth buffer (8-bit = 14.4KB)
-extern uint8_t depth_buffer[DEPTH_WIDTH * DEPTH_HEIGHT];
+// Double-buffered depth buffers (8-bit each = 14.4KB x 2)
+// Core 1 writes to one while Core 0 reads from the other
+extern uint8_t depth_buffer_a[DEPTH_WIDTH * DEPTH_HEIGHT];
+extern uint8_t depth_buffer_b[DEPTH_WIDTH * DEPTH_HEIGHT];
+extern uint8_t* depth_buffer_render;  // Core 1 writes here
+extern uint8_t* depth_buffer_display; // Core 0 reads here for billboards
 
 // Initialize the 3D renderer
 void render3d_init();
@@ -49,16 +53,19 @@ void render3d_cube(float px, float py, float pz, float sx, float sy, float sz,
 typedef void (*BillboardDrawFunc)(int x, int y, float scale, uint8_t depth, color_t* fb);
 void render3d_billboard(float wx, float wy, float wz, BillboardDrawFunc draw_func, float base_size, color_t* fb = nullptr);
 
-// Depth test helper
+// Depth test helper (uses display buffer - safe for Core 0 billboards)
 inline bool depth_test(int x, int y, uint8_t z) {
     if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return false;
     int idx = y * DEPTH_WIDTH + x;
-    if (z < depth_buffer[idx]) {
-        depth_buffer[idx] = z;
+    if (z < depth_buffer_display[idx]) {
+        depth_buffer_display[idx] = z;
         return true;
     }
     return false;
 }
+
+// Swap depth buffers (call after render_sync swaps framebuffers)
+void render3d_swap_depth_buffers();
 
 // RGB to 4-bit color (picosystem format: ggggbbbbaaaarrrr)
 inline color_t rgb_to_color(uint8_t r, uint8_t g, uint8_t b) {

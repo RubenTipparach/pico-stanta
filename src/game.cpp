@@ -68,6 +68,9 @@ static void render_sync() {
     FRAMEBUFFER = TEMP_FB;
     target(SCREEN);
 
+    // Swap depth buffers - Core 0 can now read from what Core 1 just wrote
+    render3d_swap_depth_buffers();
+
     // Get triangle count BEFORE swapping (swap resets the count!)
     last_triangle_count = rasterizer_get_triangle_count();
 

@@ -46,12 +46,12 @@ void rasterizer_begin_frame() {
 
 uint32_t rasterizer_end_frame() {
     // Single-threaded fallback: rasterize synchronously to SCREEN
-    memset(depth_buffer, 0xFF, RASTER_SCREEN_WIDTH * RASTER_SCREEN_HEIGHT);
-    
+    memset(depth_buffer_render, 0xFF, RASTER_SCREEN_WIDTH * RASTER_SCREEN_HEIGHT);
+
     for (uint32_t i = 0; i < triangle_count_next; i++) {
         rasterize_single_triangle(triangle_list_next[i], nullptr);
     }
-    
+
     triangle_count_next = 0;
     return 0;
 }
@@ -63,8 +63,8 @@ bool rasterizer_is_busy() {
 // === Multicore API ===
 
 void rasterizer_render_to_buffer(uint32_t count, color_t* buffer) {
-    // Clear depth buffer
-    memset(depth_buffer, 0xFF, RASTER_SCREEN_WIDTH * RASTER_SCREEN_HEIGHT);
+    // Clear depth buffer (Core 1 uses depth_buffer_render)
+    memset(depth_buffer_render, 0xFF, RASTER_SCREEN_WIDTH * RASTER_SCREEN_HEIGHT);
 
     // Clear color buffer with sky gradient
     for (int y = 0; y < RASTER_SCREEN_HEIGHT; y++) {
@@ -173,8 +173,8 @@ static void rasterize_single_triangle(const RasterTriangle& tri, color_t* buffer
 
             int idx = y * RASTER_SCREEN_WIDTH + x;
 
-            if (z8 > depth_buffer[idx]) continue;
-            depth_buffer[idx] = z8;
+            if (z8 > depth_buffer_render[idx]) continue;
+            depth_buffer_render[idx] = z8;
 
             // Interpolate color (Gouraud shading)
             int r = (int)((w1 * tri.r1 + w2 * tri.r2 + w3 * tri.r3) / FIXED_POINT_FACTOR);
