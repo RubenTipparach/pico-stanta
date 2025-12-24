@@ -1,5 +1,8 @@
 #include "city.hpp"
 #include <cmath>
+#include <algorithm>
+
+using namespace picosystem;
 
 // Global arrays
 Building buildings[MAX_BUILDINGS];
@@ -38,12 +41,10 @@ uint32_t city_random(uint32_t& seed) {
 void city_init(uint32_t seed) {
     city_seed = seed;
 
-    // Clear all buildings
     for (int i = 0; i < MAX_BUILDINGS; i++) {
         buildings[i].active = false;
     }
 
-    // Clear all gems
     for (int i = 0; i < MAX_GEMS_3D; i++) {
         gems_3d[i].active = false;
     }
@@ -52,7 +53,6 @@ void city_init(uint32_t seed) {
     city_chunk_left = -1;
     city_chunk_right = 2;
 
-    // Generate initial chunks
     for (int c = city_chunk_left; c <= city_chunk_right; c++) {
         city_generate_chunk(c);
     }
@@ -62,7 +62,7 @@ static int find_free_building_slot() {
     for (int i = 0; i < MAX_BUILDINGS; i++) {
         if (!buildings[i].active) return i;
     }
-    return -1;  // No free slots
+    return -1;
 }
 
 static int find_free_gem_slot() {
@@ -77,9 +77,7 @@ void city_generate_chunk(int chunk_id) {
 
     float chunk_start_x = chunk_id * CITY_CHUNK_WIDTH * TILE_SIZE_3D;
 
-    // Generate buildings along both sides of the "street" (player path is at z=0)
     for (int tx = 0; tx < CITY_CHUNK_WIDTH; tx++) {
-        // Skip some tiles to create gaps/alleys
         if (city_random(chunk_seed) % 4 == 0) continue;
 
         float world_x = chunk_start_x + tx * TILE_SIZE_3D;
@@ -90,7 +88,7 @@ void city_generate_chunk(int chunk_id) {
             if (slot >= 0) {
                 Building& b = buildings[slot];
                 b.x = world_x;
-                b.z = -4.0f - (city_random(chunk_seed) % 3);  // Left side of street
+                b.z = -4.0f - (city_random(chunk_seed) % 3);
                 b.width = 1.5f + (city_random(chunk_seed) % 100) / 100.0f;
                 b.depth = 1.5f + (city_random(chunk_seed) % 100) / 100.0f;
                 b.height = 2.0f + (city_random(chunk_seed) % 8);
@@ -115,7 +113,7 @@ void city_generate_chunk(int chunk_id) {
             if (slot >= 0) {
                 Building& b = buildings[slot];
                 b.x = world_x;
-                b.z = 4.0f + (city_random(chunk_seed) % 3);  // Right side of street
+                b.z = 4.0f + (city_random(chunk_seed) % 3);
                 b.width = 1.5f + (city_random(chunk_seed) % 100) / 100.0f;
                 b.depth = 1.5f + (city_random(chunk_seed) % 100) / 100.0f;
                 b.height = 2.0f + (city_random(chunk_seed) % 8);
@@ -140,8 +138,8 @@ void city_generate_chunk(int chunk_id) {
             if (slot >= 0) {
                 Gem3D& g = gems_3d[slot];
                 g.x = world_x + (city_random(chunk_seed) % 100) / 50.0f - 1.0f;
-                g.y = 0.5f;  // Floating above ground
-                g.z = (city_random(chunk_seed) % 100) / 50.0f - 1.0f;  // Near center
+                g.y = 0.5f;
+                g.z = (city_random(chunk_seed) % 100) / 50.0f - 1.0f;
                 g.type = city_random(chunk_seed) % 3;
                 g.collected = false;
                 g.active = true;
@@ -152,7 +150,6 @@ void city_generate_chunk(int chunk_id) {
 }
 
 void city_remove_chunk(int chunk_id) {
-    // Remove all buildings from this chunk
     for (int i = 0; i < MAX_BUILDINGS; i++) {
         if (buildings[i].active && buildings[i].chunk_id == chunk_id) {
             buildings[i].active = false;
@@ -160,7 +157,6 @@ void city_remove_chunk(int chunk_id) {
         }
     }
 
-    // Remove all gems from this chunk
     for (int i = 0; i < MAX_GEMS_3D; i++) {
         if (gems_3d[i].active && gems_3d[i].chunk_id == chunk_id) {
             gems_3d[i].active = false;
@@ -169,12 +165,10 @@ void city_remove_chunk(int chunk_id) {
 }
 
 void city_update_chunks(float camera_x) {
-    // Determine which chunks should be loaded based on camera X position
     int camera_chunk = (int)(camera_x / (CITY_CHUNK_WIDTH * TILE_SIZE_3D));
     int desired_left = camera_chunk - 1;
     int desired_right = camera_chunk + 2;
 
-    // Remove chunks that are now out of range
     while (city_chunk_left < desired_left) {
         city_remove_chunk(city_chunk_left);
         city_chunk_left++;
@@ -185,7 +179,6 @@ void city_update_chunks(float camera_x) {
         city_chunk_right--;
     }
 
-    // Add new chunks that came into range
     while (city_chunk_left > desired_left) {
         city_chunk_left--;
         city_generate_chunk(city_chunk_left);
@@ -198,24 +191,19 @@ void city_update_chunks(float camera_x) {
 }
 
 void city_render() {
-    // Render all active buildings
     for (int i = 0; i < MAX_BUILDINGS; i++) {
         if (!buildings[i].active) continue;
 
         const Building& b = buildings[i];
 
-        Vec3 pos(b.x, 0, b.z);
-        Vec3 size(b.width, b.height, b.depth);
-
-        render3d_cube(pos, size,
+        render3d_cube(b.x, 0, b.z, b.width, b.height, b.depth,
                       b.r_roof, b.g_roof, b.b_roof,
                       b.r_wall, b.g_wall, b.b_wall);
     }
 }
 
 // Gem billboard drawing function
-static void draw_gem_3d(int cx, int cy, float scale, uint8_t depth, uint8_t type, uint32_t time) {
-    // Gem colors
+static void draw_gem_3d(int cx, int cy, float scale, uint8_t depth, uint8_t type, uint32_t time, color_t* fb) {
     static const uint8_t gem_colors[3][3] = {
         {255, 50, 50},   // Red
         {50, 255, 50},   // Green
@@ -226,14 +214,12 @@ static void draw_gem_3d(int cx, int cy, float scale, uint8_t depth, uint8_t type
     uint8_t g = gem_colors[type][1];
     uint8_t b = gem_colors[type][2];
 
-    // Bob animation
     int bob = (int)(sinf(time / 200.0f) * 2 * scale);
     cy += bob;
 
     int size = (int)(3 * scale);
     if (size < 1) size = 1;
 
-    // Simple diamond shape
     for (int dy = -size; dy <= size; dy++) {
         int width = size - abs(dy);
         for (int dx = -width; dx <= width; dx++) {
@@ -241,31 +227,35 @@ static void draw_gem_3d(int cx, int cy, float scale, uint8_t depth, uint8_t type
             int py = cy + dy;
             if (px >= 0 && px < SCREEN_WIDTH && py >= 0 && py < SCREEN_HEIGHT) {
                 if (depth_test(px, py, depth)) {
-                    // Slight highlight in center
                     uint8_t rr = r, gg = g, bb = b;
                     if (abs(dx) <= 1 && dy < 0) {
                         rr = std::min(255, r + 50);
                         gg = std::min(255, g + 50);
                         bb = std::min(255, b + 50);
                     }
-                    screen.pen = Pen(rr, gg, bb);
-                    screen.pixel(Point(px, py));
+                    if (fb) {
+                        fb[py * SCREEN_WIDTH + px] = rgb_to_color(rr, gg, bb);
+                    } else {
+                        pen(rr >> 4, gg >> 4, bb >> 4);
+                        pixel(px, py);
+                    }
                 }
             }
         }
     }
 }
 
-// Global time for gem animation (set by render function)
 static uint32_t gem_render_time = 0;
 static uint8_t current_gem_type = 0;
+static color_t* gem_framebuffer = nullptr;
 
-static void gem_draw_callback(int x, int y, float scale, uint8_t depth) {
-    draw_gem_3d(x, y, scale, depth, current_gem_type, gem_render_time);
+static void gem_draw_callback(int x, int y, float scale, uint8_t depth, color_t* fb) {
+    draw_gem_3d(x, y, scale, depth, current_gem_type, gem_render_time, fb);
 }
 
-void city_render_gems(uint32_t time) {
+void city_render_gems(uint32_t time, color_t* fb) {
     gem_render_time = time;
+    gem_framebuffer = fb;
 
     for (int i = 0; i < MAX_GEMS_3D; i++) {
         if (!gems_3d[i].active || gems_3d[i].collected) continue;
@@ -273,8 +263,7 @@ void city_render_gems(uint32_t time) {
         const Gem3D& g = gems_3d[i];
         current_gem_type = g.type;
 
-        Vec3 pos(g.x, g.y, g.z);
-        render3d_billboard(pos, gem_draw_callback, 1.0f);
+        render3d_billboard(g.x, g.y, g.z, gem_draw_callback, 1.0f, fb);
     }
 }
 
@@ -284,7 +273,6 @@ bool city_check_collision(float x, float z, float radius) {
 
         const Building& b = buildings[i];
 
-        // Simple AABB collision check
         float half_w = b.width / 2 + radius;
         float half_d = b.depth / 2 + radius;
 

@@ -1,10 +1,12 @@
 @echo off
 setlocal
 
-echo === Pico Santa Build Script ===
+echo === Pico Santa Build Script (PicoSystem SDK) ===
 echo.
 
-:: Set ARM toolchain path explicitly
+:: Set SDK paths
+set PICO_SDK_PATH=C:\Users\santi\repos\pico-sdk
+set PICOSYSTEM_DIR=C:\Users\santi\repos\picosystem
 set PICO_TOOLCHAIN_PATH=C:\ProgramData\chocolatey\lib\gcc-arm-embedded\tools\gcc-arm-none-eabi-10.3-2021.10
 
 :: Add MinGW to PATH so pioasm and picotool can find their DLLs
@@ -22,8 +24,8 @@ cd build.pico
 :: Run CMake configuration with Ninja generator
 echo Configuring with CMake (using Ninja)...
 cmake .. -G Ninja ^
-    -DCMAKE_TOOLCHAIN_FILE=../../32blit-sdk/pico.toolchain ^
     -DPICO_BOARD=pimoroni_picosystem ^
+    -DPICOSYSTEM_DIR="%PICOSYSTEM_DIR%" ^
     -DPICO_TOOLCHAIN_PATH="%PICO_TOOLCHAIN_PATH%" ^
     -DCMAKE_BUILD_TYPE=Release
 

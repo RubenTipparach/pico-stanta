@@ -1,46 +1,44 @@
-# Basic parameters; check that these match your project / environment
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.12)
 
-# Replace "game" with a name for your project (this is used the name of the output)
-project(pico-santa)
+# Pull in PICO SDK (must be before project)
+include(pico_sdk_import.cmake)
 
-# Add your sources here (adding headers is optional, but helps some CMake generators)
-set(PROJECT_SOURCE
+project(pico-santa C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+
+# Initialize the Pico SDK
+pico_sdk_init()
+
+# Include the PicoSystem library
+# PICOSYSTEM_DIR must be set via -DPICOSYSTEM_DIR=... or environment variable
+if(NOT PICOSYSTEM_DIR AND DEFINED ENV{PICOSYSTEM_DIR})
+    set(PICOSYSTEM_DIR $ENV{PICOSYSTEM_DIR})
+endif()
+if(NOT PICOSYSTEM_DIR)
+    message(FATAL_ERROR "PICOSYSTEM_DIR must be set to the picosystem SDK directory")
+endif()
+include(${PICOSYSTEM_DIR}/libraries/picosystem.cmake REQUIRED)
+
+# Add compile options
+add_compile_options("-Wall" "-Wextra" "-Wno-unused-parameter")
+
+# Build the executable
+picosystem_executable(
+    pico-santa
     src/game.cpp
-    src/game.hpp
     src/render3d.cpp
-    src/render3d.hpp
+    src/rasterizer.cpp
     src/city.cpp
-    src/city.hpp
 )
 
-# ... and any other files you want in the release here
-set(PROJECT_DISTRIBS LICENSE README.md)
+# PicoSystem specific settings
+pixel_double(pico-santa)
+disable_startup_logo(pico-santa)
+no_spritesheet(pico-santa)
 
-# Build configuration; approach this with caution!
-if(MSVC)
-  add_compile_options("/W4" "/wd4244" "/wd4324" "/wd4458" "/wd4100")
-else()
-  add_compile_options("-Wall" "-Wextra" "-Wdouble-promotion" "-Wno-unused-parameter")
-endif()
+# Link multicore library for dual-core rendering
+target_link_libraries(pico-santa pico_multicore)
 
-find_package (32BLIT CONFIG REQUIRED PATHS ../32blit-sdk $ENV{PATH_32BLIT_SDK})
-
-blit_executable (${PROJECT_NAME} ${PROJECT_SOURCE})
-blit_assets_yaml (${PROJECT_NAME} assets.yml)
-blit_metadata (${PROJECT_NAME} metadata.yml)
-
-# Use custom shell for Emscripten with 2x scaled canvas (480x480)
-if(EMSCRIPTEN)
-  set_target_properties(${PROJECT_NAME} PROPERTIES
-    LINK_FLAGS "-sENVIRONMENT=web -sSDL2_IMAGE_FORMATS=['jpg'] --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/emscripten-shell.html -sEXPORTED_RUNTIME_METHODS=[addRunDependency,removeRunDependency] -sTOTAL_STACK=1MB"
-    LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/emscripten-shell.html
-  )
-endif()
-add_custom_target (flash DEPENDS ${PROJECT_NAME}.flash)
-
-# setup release packages
-install (FILES ${PROJECT_DISTRIBS} DESTINATION .)
-set (CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
-set (CPACK_GENERATOR "ZIP" "TGZ")
-include (CPack)
+# Optimize divider in RAM for performance
+target_compile_definitions(pico-santa PUBLIC PICO_DIVIDER_IN_RAM=1)

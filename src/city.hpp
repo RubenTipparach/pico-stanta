@@ -56,8 +56,8 @@ void city_update_chunks(float camera_x);
 // Render all visible buildings
 void city_render();
 
-// Render all visible gems
-void city_render_gems(uint32_t time);
+// Render all visible gems (fb = framebuffer to draw to, nullptr = use pen/pixel)
+void city_render_gems(uint32_t time, color_t* fb = nullptr);
 
 // Check collision with buildings at a world position
 bool city_check_collision(float x, float z, float radius);

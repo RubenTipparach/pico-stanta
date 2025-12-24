@@ -25,7 +25,9 @@
       "Bash(cmake --build:*)",
       "Bash(PATH=\"C:/ProgramData/mingw64/mingw64/bin:$PATH\" ninja:*)",
       "Bash(bash:*)",
-      "Bash(PATH=\"C:/ProgramData/mingw64/mingw64/bin:$PATH\" c:/Users/santi/repos/pico-santa/build.pico/pioasm-install/pioasm/pioasm.exe:*)"
+      "Bash(PATH=\"C:/ProgramData/mingw64/mingw64/bin:$PATH\" c:/Users/santi/repos/pico-santa/build.pico/pioasm-install/pioasm/pioasm.exe:*)",
+      "Bash(c:/Users/santi/repos/pico-santa/build.pico/pioasm-install/pioasm/pioasm.exe:*)",
+      "Bash(C:/ProgramData/chocolatey/bin/ninja.exe)"
     ]
   }
 }
